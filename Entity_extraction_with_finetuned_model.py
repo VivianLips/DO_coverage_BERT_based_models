@@ -1,3 +1,6 @@
+nltk.download('wordnet')
+nltk.download('omw-1.4')
+
 from transformers import AutoModelForTokenClassification, AutoTokenizer
 import json
 import torch
@@ -63,15 +66,57 @@ def extract_entities(tokens):
     # return the list of entities
     return entities
 
+# Read a corpus of text
 def open_json_file(file):
-  # read the preprocessed corpus
   with open(file, 'r') as f:
     corpus = json.load(f)
   return corpus
 
 
-def main()
+# Clean list of entities
+def clean_entity_list(entities):
+  # Create an empty list to store the cleaned entities
+  cleaned_list = []
+  lemmatizer = WordNetLemmatizer()
 
+  # Loop over the entities
+  for entity in entities:
+    # lowercase and strip white spaces
+    entity = entity.lower().strip()
+
+    # if the entity contains ## somewhere, skip it (bad token alignment)
+    if '##' in entity:
+      continue
+
+    # Remove noise in tokens
+    entity = re.sub(r"[\[\]\(\)\\\/]", " ", entity) # brackets/slashes
+    entity = re.sub(r"[^\w\s\-\+\.\']", "", entity) # other special characters
+
+    # fix spacing between ' and -
+    entity = re.sub(r"\s*'\s*", "'", entity)
+    entity = re.sub(r"\s*\.\s*", ".", entity)
+    entity = re.sub(r"\s*[-]\s*", "-", entity)
+    entity = re.sub(r"\s*[\+]\s*", "+", entity)
+
+    # lemmatize last words from entities to create singular forms from plural forms
+    last_word = entity.split()
+    if last_word:
+      last_word[-1] = lemmatizer.lemmatize(last_word[-1], pos='n')
+      entity = " ".join(last_word)
+
+    if entity:
+      cleaned_list.append(entity)
+
+    return cleaned_list
+      
+# save cleaned entity list in a JSON file
+def save_cleaned_entities(output_path, cleaned_entities):
+  with open(output_path, "w", encoding="utf-8") as f:
+    json.dump(cleaned_entities, f, indent=2)
+  return cleaned_entities
+
+
+def main()
 
 # define the directory with fine-tuned model 
 output_dir = '\content\model'
@@ -96,7 +141,15 @@ for tokens in preprocessed_corpus:
 # obtain unique entities
 unique_entities = set(entity for entities in all_extracted_entities for entity in entities)
 
-return unique entities
+# Clean the list of entities
+cleaned_entities = clean_entity_list(unique_entities)
+
+output_path = "/content/cleaned_unique_entities"
+
+# save the list to a JSON file
+cleaned_entities_list = save_cleaned_entities(output_path, cleaned_entities)
+
+return cleaned_entities_list
 
 if __name__ == "__main__":
   main()
