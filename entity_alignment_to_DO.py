@@ -41,9 +41,13 @@ def load_disease_ontology(ontology):
     return concepts, synonyms
 
 def main():
+  
   # open the JSON file with cleaned entities
   with open("/content/cleaned_unique_entities", "r", encoding="utf-8") as f:
       cleaned_list = json.load(f)
+
+  # create dictionaries of concept and synonyms
+  disease_dict, synonym_dict = load_disease_ontology(obo_file)
     
   # create dictionaries for concepts with entities, and synonyms with concepts and entities
   exact_match = {}
@@ -51,7 +55,7 @@ def main():
 
   # loop through the cleaned list and find matches
   for entity in cleaned_list:
-    if entity in concept_dict:
+    if entity in disease_dict:
       exact_match[entity] = entity
     elif entity in synonym_dict:
       synonym_matches[entity] = (entity, synonym_dict[entity])
