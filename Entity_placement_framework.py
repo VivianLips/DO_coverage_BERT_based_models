@@ -5,6 +5,9 @@ import torch.nn.functional as F
 import pandas as pd
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from sentence_transformers import SentenceTransformer, util
+from collections import defaultdict
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 
 # Install required libraries
 #!pip install transformers sentence-transformers pandas --quiet 
@@ -52,6 +55,64 @@ def determine_NLI_classes(entity, ontology_term):
   # Both entailment scores are too low, so we cannot identify the directionality of the relationship
   else:
     return "Relation unclear" 
+
+
+# Create clusters of synonyms that are equivalent
+def cluster_synonym(results, model, threshold=0.9):
+  
+    # Group extracted entities by their best ontology match
+    synonym_to_entities = defaultdict(list)
+
+    # Loop through the matching results
+    for result in results:
+       # Check for synonym suggestions
+        if result['Recommendation'] == 'Add as synonym':
+            synonym_to_entities[result['Best ontology match']].append(result['Extracted entity'])
+
+    # Create an empty dictionary to store the synonym clusters in
+    clusters_per_synonym = {}
+
+    # Loop through the synonyms with the corresponding matched entities
+    for synonym, entities in synonym_to_entities.items():
+
+      # if cluster consists of 1 entity create that as the candidate entity
+        if len(entities) == 1:
+            clusters_per_synonym[synonym] = [entities]
+            continue
+
+        # Embed  the entities using cosine similarity
+        embeddings = model.encode(entities, convert_to_tensor=False)
+        similarity = cosine_similarity(embeddings)
+
+        assigned = set()
+        clusters = []
+
+        # Loop through the matched entities for a certain synonym
+        for i, entity in enumerate(entities):
+          
+            # Skip entity i if already assigned a cluster
+            if i in assigned:
+                continue
+
+           # Otherwise add the entity to the specific cluster starting with i
+            cluster = [entity]
+            assigned.add(i)
+
+           # Loop through the entities that come after i (i+1)
+            for j in range(i+1, len(entities)):
+
+               # Check if they are similar enough (>0.9) 
+                if j not in assigned and simimilarity[i, j] >= threshold:
+
+                    # If so add them to cluster i
+                    cluster.append(entities[j])
+                    assigned.add(j)
+            clusters.append(cluster)
+
+        # save the clusters
+        clusters_per_synonym[synonym] = clusters
+
+    return clusters_per_synonym
 
 
 def main():
@@ -110,13 +171,19 @@ def main():
       "Recommendation": recommend,
       "Relationship": relation
     })
-  
 
+    # check for synonym clusters
+    synonym_clusters = cluster_synonym(results, sapbert, threshold=0.9)
+
+  
 
 if __name__ == "__main__":
     main()
 
+
 df = pd.DataFrame(results)
 csv_path = "your_path"
 df.to_csv(csv_path, index=False)
-      
+
+with open("synonym_clusters_model.json", "w", encoding="utf-8") as f:
+    json.dump(synonym_clusters, f, indent=2, ensure_ascii=False)
