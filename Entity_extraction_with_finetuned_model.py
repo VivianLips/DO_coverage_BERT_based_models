@@ -88,9 +88,9 @@ def clean_entity_list(entities):
     if '##' in entity:
       continue
 
-    # Remove noise in tokens
-    entity = re.sub(r"[\[\]\(\)\\\/]", " ", entity) # brackets/slashes
-    entity = re.sub(r"[^\w\s\-\+\.\']", "", entity) # other special characters
+    # Remove noise in tokens - Only use if needed
+    #entity = re.sub(r"[\[\]\(\)\\\/]", " ", entity) # brackets/slashes
+    #entity = re.sub(r"[^\w\s\-\+\.\']", "", entity) # other special characters
 
     # fix spacing between ' and -
     entity = re.sub(r"\s*'\s*", "'", entity)
