@@ -1,4 +1,4 @@
-# Automatic coverage evaluation of the Disease Ontology (D0) using transformer models
+# Automatic coverage evaluation of the Disease Ontology (DO) using transformer models
 
 ## Overview
 This repository contains the code used for the thesis: "Ontology Coverage Evaluation using BERT-based Transformer Models" (Vrije Universiteit Amsterdam, 2025).
